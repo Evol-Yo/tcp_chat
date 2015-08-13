@@ -10,7 +10,7 @@ USER_MANAGE_PATH=$(ROOT_PATH)/user_manage
 CC=g++
 CFLAGS=-g -Wall -std=c++11
 LIB= -lpthread -ljsoncpp
-LDFLAGS=#-static
+LDFLAGS=-static
 INCLUDE=-I$(COMM_PATH) -I$(DATA_POOL_PATH) \
 		-I$(LIB_PATH) -I$(LOG_PATH) -I$(SERVER_PATH) -I$(USER_MANAGE_PATH)
 
