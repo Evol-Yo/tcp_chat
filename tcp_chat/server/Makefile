@@ -18,10 +18,6 @@ SRC=$(shell ls -R | egrep '*.cpp')
 SER_OBJ=$(SRC:.cpp=.o)
 SER_BIN=chat_server
 
-#.PHONY:debug
-#debug:
-#	@echo $(SER_OBJ)
-
 all:$(SER_BIN)
 
 $(SER_BIN):$(SER_OBJ)

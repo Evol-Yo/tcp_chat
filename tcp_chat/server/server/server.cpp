@@ -2,13 +2,29 @@
 #include "util.h"
 
 server::server(user_manage *user_mg)
-	:_sock(0), _user_manage(user_mg)
+	:_sock(0)
 {
 	//初始化channel
-	channel chan(user_mg);
-	chan._id = 0;
-	chan._name = "bit";
-	_channels.push_back(chan);
+	_channels = new channel[MAX_CHANNELS];
+	_thread = new pthread_t[MAX_CHANNELS];
+	int i = 0;
+	for(; i < MAX_CHANNELS; i++){
+		_channels[i]._user_manage = user_mg;
+		_channels[i].init(i, "");
+		_thread[i] = -1;
+	}
+}
+
+server::~server()
+{
+	delete []_channels;	
+	delete []_thread;
+}
+
+void *server::channel_run(void *chan)
+{
+	int ret = ((channel*)chan)->run();
+	return (void*)ret;
 }
 
 int server::init(const string &ip, unsigned short port)
@@ -42,11 +58,21 @@ int server::init(const string &ip, unsigned short port)
 		return -3;
 	}
 
+
 	return 0;
+}
+
+void sig_handler(int signo)
+{
+	//我们什么都不用做，仅仅用来唤醒channle线程
 }
 
 int server::run()
 {	
+	//当有新用户上线时，我们需要唤醒channel线程
+	signal(SIGUSR1, sig_handler);
+	pthread_create(&_thread[0], NULL, channel_run, &_channels[0]);
+
 	while(1){
 
 		msg_info msg;
@@ -54,15 +80,14 @@ int server::run()
 
 		int conn = accept(_sock, NULL, NULL);
 		log_message("accept success");
+		//接收用户信息
 		if(recv_msg(conn, msg) < 0){
 			return -1;
 		}
-
-		if(proc_msg(conn, msg) < 0){
-			return -1;
-		}
-
-		_channels[msg._head._id].run();
+		int id = msg._head._id;
+		data_info::str_to_val(msg._msg, data);
+		_channels[id].put_data(data);
+		pthread_kill(_thread[id], SIGUSR1);
 	}
 
 	return 0;
@@ -70,47 +95,51 @@ int server::run()
 
 int server::recv_msg(int sock, msg_info &msg)
 {
-	char buf[BUF_SIZE];
+	char buf[BUF_SIZE + 13];
 	bzero(buf, sizeof(buf));
 
-	//先读取长度字段
+	//先读取id字段和长度字段
 	ssize_t size = 0;
 	do{
-		int len = recv(sock, buf + size, 4-size, 0);
+		int len = recv(sock, buf + size, 10-size, 0);
 		if(len < 0){
 			log_error("recv error");
 			return len;
 		}
 		size += len;
-	} while(size == 4);
+	} while(size < 10);
 
-	int msglen = atoi(buf);
+	if(buf[0] != '%' || buf[1] != '#'){
+		log_error("recv error");
+		//我们应该尝试恢复数据(找到下一个以%#开头的字符序列)， 为了测试，我们直接退出
+		return -1;
+	}
+	int msglen = atoi(buf + 6);
+	bzero(buf + 6, 4);
+	int id = atoi(buf+2);
+	bzero(buf, 6);
 
 	//再读取消息字段
 	size = 0;
-	bzero(buf, sizeof(buf));
 	do{
-		int len = recv(sock, buf + size, msglen - size + 4, 0);
+		int len = recv(sock, buf + size, msglen - size + 2, 0);
 		if(len < 0){
 			log_error("recv error");
 			return len;
 		}
 		size += len;
-	} while(size == msglen);
+	} while(size < msglen + 2);
 
-	if(buf[0] != '%' || buf[1] != '#'){
-		log_error("message head error!");
+	if(buf[msglen] != '%' || buf[msglen+1] != '#'){
+		log_error("recv error!");
 		return -1;
 	}
-	if(buf[msglen + 1] != '#' || buf[msglen + 2] != '%'){
-		log_error("message tail error!");
-		return -1;
-	}
+	buf[msglen] = '\0';
 	buf[msglen + 1] = '\0';
-	buf[msglen + 2] = '\0';
 
-	//反序列化
-	msg_info::str_to_val(buf+2, msg);
+	msg._head._id = id;
+	msg._head._msglen = msglen;
+	msg._msg = buf;
 
 	return msglen;
 }
@@ -119,53 +148,14 @@ int server::recv_msg(int sock, msg_info &msg)
 int server::send_msg(int sock, const msg_info &msg)
 {
 	string str;
-	msg_info::val_to_str(msg, str);
-	int msglen = str.length();
-
-	char buf[BUF_SIZE + 5];
+	char buf[BUF_SIZE + 13];
 	bzero(buf , sizeof(buf));
 	//加上长度字段,和特殊标志，用以检查错误
-	sprintf(buf, "%4d", msglen);
-	sprintf(buf+4, "%%#");
-	sprintf(buf+6, "%s", str.c_str());
-	sprintf(buf + msglen + 1, "#%%");
+	sprintf(buf, "%%#");
+	sprintf(buf + 2, "%4d", msg._head._id);
+	sprintf(buf+6, "%4d", msg._head._msglen);
+	sprintf(buf+10, "%s", msg._msg.c_str());
+	sprintf(buf+10+msg._msg.length(), "%%#");
 
-	return send(sock, buf, msglen+8, 0);
-}
-
-int server::proc_msg(int conn, const msg_info &msg)
-{
-	int cmd = msg._head._cmd;
-	if(cmd < 0){
-		return -1;
-	}
-	
-	if(cmd == CMD_REGISTER){
-		client_info cli;
-		client_info::str_to_val(msg._msg, cli);
-		cli._valid = true;
-		if(_channels[msg._head._id].register_user(cli) < 0){
-			log_error("register_user error");
-			return -1;
-		}
-		log_message("register_user success, user:%s", msg._msg.c_str());
-		//在这里我们应该关闭连接，等待用户重新登陆
-		//close(conn)
-	}
-
-	//cmd == CMD_ONLINE
-	client_info cli;
-	client_info::str_to_val(msg._msg, cli);
-	if(_channels[msg._head._id].add_online_user(conn, cli) < 0){
-		log_error("add_online_user error");
-		return -1;
-	}
-	log_message("add_online_user success, user: %s", msg._msg.c_str());
-	msg_info user_list;
-	_channels[msg._head._id].send_user_list(user_list);
-	
-	//向该用户发送好友列表
-	send_msg(conn, user_list);
-
-	return 0;
+	return send(sock, buf, msg._head._msglen+12, 0);
 }

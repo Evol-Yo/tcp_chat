@@ -26,6 +26,7 @@ typedef struct msg_info {
 	{
 		_head._id = -1;
 		_head._msglen = -1;
+<<<<<<< HEAD
 		_head._cmd = -1;
 	}
 
@@ -67,6 +68,14 @@ typedef struct msg_info {
 	typedef struct {
 		int		_id;	//channel id
 		int		_cmd;
+=======
+	}
+
+	//头部在传输的时候占8个字节（_id占4个字节, _msglen占四个字节）
+	enum {HEADLEN = 8};
+	typedef struct {
+		int		_id;	//channel id
+>>>>>>> branch
 		int		_msglen;
 	} _head_info;
 
@@ -127,6 +136,7 @@ typedef struct data_info {
 typedef struct client_info {
 
 	client_info()
+<<<<<<< HEAD
 		: _id(-1), _channel_id(-1), _online(false) 
 	{}
 
@@ -138,6 +148,11 @@ typedef struct client_info {
 	//	_name = cli._name; 
 
 	//}
+=======
+		: _id(-1), _channel_id(-1) 
+	{}
+
+>>>>>>> branch
 	static void val_to_str(const client_info &cli, string &str){
 		Json::Value val;
 		char buf[10];
@@ -165,11 +180,17 @@ typedef struct client_info {
 
 	typedef int		id_type;
 
+<<<<<<< HEAD
 	bool				_valid;	//为1表示有效
 	id_type				_id;
 	id_type				_channel_id;
 	bool				_online;
 	string 				_name;
+=======
+	id_type				_id;			//user id
+	id_type				_channel_id;	//组内id
+	string 				_name;			//名字
+>>>>>>> branch
 
 } client_info;
 
