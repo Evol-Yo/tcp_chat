@@ -26,56 +26,12 @@ typedef struct msg_info {
 	{
 		_head._id = -1;
 		_head._msglen = -1;
-<<<<<<< HEAD
-		_head._cmd = -1;
-	}
-
-	msg_info& operator=(msg_info msg){
-		_head._id = msg._head._id;
-		_head._msglen = msg._head._msglen;
-		_head._cmd = msg._head._cmd;
-		_msg = msg._msg;
-		return *this;
-	}
-
-	static void val_to_str(const msg_info &msg, string &str){
-		Json::Value val;
-		char buf[10];
-		bzero(buf, sizeof(buf));
-		sprintf(buf, "%d", msg._head._id);
-		val["_id"] = buf;
-		sprintf(buf, "%d", msg._head._msglen);
-		val["_msglen"] = buf;
-		sprintf(buf, "%d", msg._head._cmd);
-		val["_cmd"] = buf;
-		val["_msg"] = msg._msg.c_str();
-		my_json::val_to_str(val, str);
-	}
-
-	static int str_to_val(const string &str, msg_info &msg){
-		Json::Value val;
-		int ret = my_json::str_to_val(str, val);
-		if(ret < 0){
-			return ret;
-		}
-		msg._head._id = atoi(val["_id"].asString().c_str());
-		msg._head._cmd = atoi(val["_cmd"].asString().c_str());
-		msg._head._msglen = atoi(val["_msglen"].asString().c_str());
-		msg._msg = val["_msg"].asString();
-		return 0;
-	}
-
-	typedef struct {
-		int		_id;	//channel id
-		int		_cmd;
-=======
 	}
 
 	//头部在传输的时候占8个字节（_id占4个字节, _msglen占四个字节）
 	enum {HEADLEN = 8};
 	typedef struct {
 		int		_id;	//channel id
->>>>>>> branch
 		int		_msglen;
 	} _head_info;
 
@@ -136,23 +92,9 @@ typedef struct data_info {
 typedef struct client_info {
 
 	client_info()
-<<<<<<< HEAD
-		: _id(-1), _channel_id(-1), _online(false) 
-	{}
-
-	//client_info &operator=(const client_info &cli){
-	//	_valid = cli._valid;
-	//	_id = cli._id;   		
-	//	_channel_id = cli._channel_id;	
-	//	_online = cli._online;
-	//	_name = cli._name; 
-
-	//}
-=======
 		: _id(-1), _channel_id(-1) 
 	{}
 
->>>>>>> branch
 	static void val_to_str(const client_info &cli, string &str){
 		Json::Value val;
 		char buf[10];
@@ -180,17 +122,9 @@ typedef struct client_info {
 
 	typedef int		id_type;
 
-<<<<<<< HEAD
-	bool				_valid;	//为1表示有效
-	id_type				_id;
-	id_type				_channel_id;
-	bool				_online;
-	string 				_name;
-=======
 	id_type				_id;			//user id
 	id_type				_channel_id;	//组内id
 	string 				_name;			//名字
->>>>>>> branch
 
 } client_info;
 

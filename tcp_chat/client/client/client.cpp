@@ -8,11 +8,7 @@ Client::Client(chatdialog *chat, QObject  *parent)
 {
     chatDialog = chat;
     socket = new QTcpSocket(this);
-<<<<<<< HEAD
-    socket->connectToHost("127.0.0.1", 49998);
-=======
     socket->connectToHost("127.0.0.1", 49999);
->>>>>>> branch
     connect(socket, SIGNAL(stateChanged(QAbstractSocket::SocketState)),
                    this, SLOT(socketStateChanged(QAbstractSocket::SocketState)));
     connect(socket, SIGNAL(readyRead()),
@@ -51,8 +47,6 @@ void Client::sendData()
     QString input = "hello world";
     socket->write(input.toUtf8() + "\r\n");
 }
-<<<<<<< HEAD
-=======
 
 int Client::recv_msg(int sock, msg_info &msg)
 {
@@ -204,4 +198,3 @@ int Client::proc_msg(msg_info &msg)
     return 0;
 }
 
->>>>>>> branch
